@@ -1,0 +1,53 @@
+int32 BUFFER = 65536;
+int32 buf_pos = 0;
+
+fn write_byte(int32 c) int32 {
+    *BUFFER = c;
+    BUFFER = BUFFER + 1;
+    buf_pos = buf_pos + 1;
+    ret 0;
+}
+
+fn write_string(int8* s) int32 {
+    int32 i = 0;
+    while (*(s + i) != 0) {
+        write_byte(*(s + i));
+        i = i + 1;
+    }
+    ret 0;
+}
+
+fn write_int(int32 n) int32 {
+    if (n < 0) {
+        write_byte(45);
+        n = 0 - n;
+    }
+    if (n == 0) {
+        write_byte(48);
+        ret 0;
+    }
+    int32 rev = 0;
+    while (n > 0) {
+        rev = rev * 10 + (n - (n / 10) * 10);
+        n = n / 10;
+    }
+    while (rev > 0) {
+        write_byte(48 + (rev - (rev / 10) * 10));
+        rev = rev / 10;
+    }
+    ret 0;
+}
+
+fn init_buffer() int32 {
+    BUFFER = 65536;
+    buf_pos = 0;
+    ret 0;
+}
+
+fn get_buffer_pos() int32 {
+    ret buf_pos;
+}
+
+fn get_buffer_addr() int32 {
+    ret 65536;
+}

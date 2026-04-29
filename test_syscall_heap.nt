@@ -1,0 +1,13 @@
+fn entry_point() int8 {
+    int32 heap = syscall(12, 0);
+    syscall(12, heap + 1048576);
+    
+    int32 fd = syscall(2, "test.nt", 0, 0);
+    if (fd < 0) {
+        logg("Failed to open");
+        ret 1;
+    }
+    logg("Opened successfully");
+    syscall(3, fd);
+    ret 0;
+}

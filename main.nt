@@ -1,0 +1,4 @@
+fn entry_point() int8 {
+        logg("hello world");
+        ret 0;
+}

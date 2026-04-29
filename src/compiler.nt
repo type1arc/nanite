@@ -1,0 +1,868 @@
+fn debug_log(int32 n) int32 {
+    write_int_to_stdout(n);
+    sys_write(1, "\n", 1);
+    ret 0;
+}
+
+fn emit(int32 c) int32 {
+    poke8(OUT, c);
+    OUT = OUT + 1;
+    ret 0;
+}
+
+fn emit_str(int8* s) int32 {
+    int32 i = 0;
+    while (peek8(s + i) != 0) {
+        emit(peek8(s + i));
+        i = i + 1;
+    }
+    ret 0;
+}
+
+fn write_int(int32 n) int32 {
+    if (n < 0) {
+        emit(45);
+        n = 0 - n;
+    }
+    if (n == 0) {
+        emit(48);
+        ret 0;
+    }
+    int32 div = 1;
+    while ((n / div) >= 10) {
+        div = div * 10;
+    }
+    while (div > 0) {
+        int32 d = n / div;
+        emit(48 + d);
+        n = n - (d * div);
+        div = div / 10;
+    }
+    ret 0;
+}
+
+fn peek() int32 {
+    if (tok_pos >= SRC_LEN) { ret 0; }
+    ret peek8(SRC + tok_pos);
+}
+
+fn advance_ch() int32 {
+    int32 c = peek();
+    if (c == 10) { tok_line = tok_line + 1; }
+    tok_pos = tok_pos + 1;
+    ret c;
+}
+
+fn is_space(int32 c) int32 {
+    if (c == 32) { ret 1; }
+    if (c == 9) { ret 1; }
+    if (c == 10) { ret 1; }
+    ret 0;
+}
+
+fn is_digit(int32 c) int32 {
+    if (c >= 48) {
+        if (c <= 57) { ret 1; }
+    }
+    ret 0;
+}
+
+fn is_alpha(int32 c) int32 {
+    if (c >= 65) {
+        if (c <= 90) { ret 1; }
+    }
+    if (c >= 97) {
+        if (c <= 122) { ret 1; }
+    }
+    if (c == 95) { ret 1; }
+    ret 0;
+}
+
+fn is_alnum(int32 c) int32 {
+    if (is_alpha(c) == 1) { ret 1; }
+    if (is_digit(c) == 1) { ret 1; }
+    ret 0;
+}
+
+fn skip_ws() int32 {
+    while (is_space(peek()) == 1) {
+        advance_ch();
+    }
+    ret 0;
+}
+
+fn next_token() int32 {
+    debug_log(4000 + tok_pos);
+    skip_ws();
+    int32 c = peek();
+    debug_log(2000 + c);
+    if (c == 0) { tok_type = 0; ret 0; }
+    
+    if (c == 47) {
+        if (tok_pos + 1 < SRC_LEN) {
+            if (peek8(SRC + tok_pos + 1) == 47) {
+            while (peek() != 10) {
+                if (peek() == 0) { ret 0; }
+                advance_ch();
+            }
+                next_token();
+                ret 0;
+            }
+        }
+    }
+    
+    if (is_alpha(c) == 1) {
+        int32 start = tok_pos;
+        while (is_alnum(peek()) == 1) {
+            advance_ch();
+        }
+        tok_ident_ptr = SRC + start;
+        tok_value = tok_pos - start;
+        
+        if (tok_value == 2) {
+            if (peek8(tok_ident_ptr) == 102) { 
+                if (peek8(tok_ident_ptr + 1) == 110) { 
+                    tok_type = 1; 
+                    ret 0; 
+                } 
+            }
+            if (peek8(tok_ident_ptr) == 105) { if (peek8(tok_ident_ptr + 1) == 102) { tok_type = 12; ret 0; } }
+        }
+        if (tok_value == 3) {
+            if (peek8(tok_ident_ptr) == 114) { if (peek8(tok_ident_ptr + 1) == 101) { if (peek8(tok_ident_ptr + 2) == 116) { tok_type = 2; ret 0; } } }
+            if (peek8(tok_ident_ptr) == 115) { if (peek8(tok_ident_ptr + 1) == 116) { if (peek8(tok_ident_ptr + 2) == 114) { tok_type = 24; ret 0; } } }
+        }
+        if (tok_value == 4) {
+            if (peek8(tok_ident_ptr) == 118) { if (peek8(tok_ident_ptr + 1) == 111) { if (peek8(tok_ident_ptr + 2) == 105) { if (peek8(tok_ident_ptr + 3) == 100) { tok_type = 29; ret 0; } } } }
+            if (peek8(tok_ident_ptr) == 108) { if (peek8(tok_ident_ptr + 1) == 111) { if (peek8(tok_ident_ptr + 2) == 103) { if (peek8(tok_ident_ptr + 3) == 103) { tok_type = 25; ret 0; } } } }
+        }
+        if (tok_value == 5) {
+            if (peek8(tok_ident_ptr) == 105) { if (peek8(tok_ident_ptr + 1) == 110) { if (peek8(tok_ident_ptr + 2) == 116) { if (peek8(tok_ident_ptr + 3) == 51) { if (peek8(tok_ident_ptr + 4) == 50) { tok_type = 3; ret 0; } } } } }
+            if (peek8(tok_ident_ptr) == 119) { if (peek8(tok_ident_ptr + 1) == 104) { if (peek8(tok_ident_ptr + 2) == 105) { if (peek8(tok_ident_ptr + 3) == 108) { if (peek8(tok_ident_ptr + 4) == 101) { tok_type = 30; ret 0; } } } } }
+        }
+        if (tok_value == 4) {
+            if (peek8(tok_ident_ptr) == 101) { if (peek8(tok_ident_ptr + 1) == 108) { if (peek8(tok_ident_ptr + 2) == 115) { if (peek8(tok_ident_ptr + 3) == 101) { tok_type = 13; ret 0; } } } }
+            if (peek8(tok_ident_ptr) == 105) { if (peek8(tok_ident_ptr + 1) == 110) { if (peek8(tok_ident_ptr + 2) == 116) { if (peek8(tok_ident_ptr + 3) == 56) { tok_type = 23; ret 0; } } } }
+        }
+        
+        tok_type = 4;
+        ret 0;
+    }
+    
+    if (is_digit(c) == 1) {
+        int32 start = tok_pos;
+        while (is_digit(peek()) == 1) {
+            advance_ch();
+        }
+        tok_value = tok_pos - start;
+        tok_ident_ptr = SRC + start;
+        tok_type = 11;
+        ret 0;
+    }
+    
+    if (c == 34) { // Quote
+        advance_ch();
+        int32 start = tok_pos;
+        while (peek() != 34) {
+            if (peek() == 0) { ret 0; }
+            advance_ch();
+        }
+        tok_value = tok_pos - start;
+        tok_ident_ptr = SRC + start;
+        advance_ch();
+        tok_type = 33; // String literal
+        ret 0;
+    }
+    
+    if (c == 60) {
+        advance_ch();
+        if (peek() == 61) { advance_ch(); tok_type = 31; }
+        else { tok_type = 21; }
+        ret 0;
+    }
+    if (c == 62) {
+        advance_ch();
+        if (peek() == 61) { advance_ch(); tok_type = 32; }
+        else { tok_type = 22; }
+        ret 0;
+    }
+    
+    advance_ch();
+    if (c == 40) { tok_type = 5; ret 0; }
+    if (c == 41) { tok_type = 6; ret 0; }
+    if (c == 123) { tok_type = 7; ret 0; }
+    if (c == 125) { tok_type = 8; ret 0; }
+    if (c == 59) { tok_type = 9; ret 0; }
+    if (c == 44) { tok_type = 28; ret 0; }
+    if (c == 43) { tok_type = 15; ret 0; }
+    if (c == 45) { tok_type = 16; ret 0; }
+    if (c == 42) { tok_type = 17; ret 0; }
+    if (c == 47) { tok_type = 18; ret 0; }
+    if (c == 61) {
+        if (peek() == 61) { advance_ch(); tok_type = 19; }
+        else { tok_type = 10; }
+        ret 0;
+    }
+    if (c == 33) {
+        if (peek() == 61) { advance_ch(); tok_type = 20; }
+        ret 0;
+    }
+    if (c == 38) {
+        if (peek() == 38) { advance_ch(); tok_type = 26; }
+        ret 0;
+    }
+    if (c == 124) {
+        if (peek() == 124) { advance_ch(); tok_type = 27; }
+        ret 0;
+    }
+    
+    tok_type = 0;
+    ret 0;
+}
+
+fn init_lexer(int32 src_ptr, int32 len) int32 {
+    SRC = src_ptr;
+    SRC_LEN = len;
+    tok_pos = 0;
+    tok_line = 1;
+    
+    next_token();
+    ret 0;
+}
+
+fn expect(int32 t) int32 {
+    if (tok_type == t) {
+        next_token();
+        ret 0;
+    }
+    sys_write(1, "Expected token ", 15);
+    write_int_to_stdout(t);
+    sys_write(1, " but got ", 9);
+    write_int_to_stdout(tok_type);
+    sys_write(1, " at pos ", 8);
+    write_int_to_stdout(tok_pos);
+    sys_write(1, "\n", 1);
+    syscall(60, 1); // exit(1)
+    ret 1;
+}
+
+fn clear_vars() int32 {
+    NUM_VARS = 0;
+    ret 0;
+}
+
+fn add_var(int32 name, int32 len, int32 offset) int32 {
+    debug_log(5000 + NUM_VARS);
+    *(VAR_NAME_PTRS + NUM_VARS * 8) = name;
+    debug_log(5100);
+    *(VAR_NAME_LENS + NUM_VARS * 8) = len;
+    debug_log(5200);
+    *(VAR_OFFSETS + NUM_VARS * 8) = offset;
+    debug_log(5300);
+    NUM_VARS = NUM_VARS + 1;
+    ret 0;
+}
+
+fn get_var_offset_by_name(int32 name, int32 len) int32 {
+    int32 i = 0;
+    while (i < NUM_VARS) {
+        if (*(VAR_NAME_LENS + i * 8) == len) {
+            int32 v_name = *(VAR_NAME_PTRS + i * 8);
+            int32 match = 1;
+            int32 j = 0;
+            while (j < len) {
+                if (peek8(v_name + j) != peek8(name + j)) { match = 0; }
+                j = j + 1;
+            }
+            if (match == 1) { ret *(VAR_OFFSETS + i * 8); }
+        }
+        i = i + 1;
+    }
+    ret 0;
+}
+
+fn add_string_literal(int32 ptr, int32 len) int32 {
+    int32 i = 0;
+    while (i < NUM_STRINGS) {
+        if (*(STR_LENS + i * 8) == len) {
+            int32 s_ptr = *(STR_PTRS + i * 8);
+            int32 match = 1;
+            int32 j = 0;
+            while (j < len) {
+                if (peek8(s_ptr + j) != peek8(ptr + j)) { match = 0; }
+                j = j + 1;
+            }
+            if (match == 1) { ret i; }
+        }
+        i = i + 1;
+    }
+    int32 dest = STRINGS + STR_BUF_POS;
+    int32 j = 0;
+    while (j < len) {
+        poke8(dest + j, peek8(ptr + j));
+        j = j + 1;
+    }
+    poke8(dest + len, 0);
+    *(STR_PTRS + NUM_STRINGS * 8) = dest;
+    *(STR_LENS + NUM_STRINGS * 8) = len;
+    STR_BUF_POS = STR_BUF_POS + len + 1;
+    int32 idx = NUM_STRINGS;
+    NUM_STRINGS = NUM_STRINGS + 1;
+    ret idx;
+}
+
+fn fresh_label() int32 {
+    LABEL_ID = LABEL_ID + 1;
+    ret LABEL_ID;
+}
+
+fn parse_expr() int32;
+fn parse_stmt() int32;
+
+fn parse_primary() int32 {
+    if (tok_type == 11) {
+        int32 val = 0;
+        int32 i = 0;
+        while (i < tok_value) {
+            val = val * 10 + (peek8(tok_ident_ptr + i) - 48);
+            i = i + 1;
+        }
+        emit_str("    movq $");
+        write_int(val);
+        emit_str(", %%rax\n");
+        emit_str("    pushq %%rax\n");
+        next_token();
+        ret 0;
+    }
+    if (tok_type == 33) { // String literal
+        int32 idx = add_string_literal(tok_ident_ptr, tok_value);
+        emit_str("    leaq .L_STR_");
+        write_int(idx);
+        emit_str("(%%rip), %%rax\n");
+        emit_str("    pushq %%rax\n");
+        next_token();
+        ret 0;
+    }
+    if (tok_type == 4) {
+        int32 name = tok_ident_ptr;
+        int32 name_len = tok_value;
+        next_token();
+        if (tok_type == 5) {
+            next_token();
+            
+            // Special cases for built-ins
+            int32 is_syscall = 0;
+            if (name_len == 7) {
+                if (peek8(name) == 115) { if (peek8(name+1) == 121) { if (peek8(name+2) == 115) { if (peek8(name+3) == 99) { if (peek8(name+4) == 97) { if (peek8(name+5) == 108) { if (peek8(name+6) == 108) { is_syscall = 1; } } } } } } }
+            }
+            int32 is_peek8 = 0;
+            if (name_len == 5) {
+                if (peek8(name) == 112) { if (peek8(name+1) == 101) { if (peek8(name+2) == 101) { if (peek8(name+3) == 107) { if (peek8(name+4) == 56) { is_peek8 = 1; } } } } }
+            }
+            int32 is_poke8 = 0;
+            if (name_len == 5) {
+                if (peek8(name) == 112) { if (peek8(name+1) == 111) { if (peek8(name+2) == 107) { if (peek8(name+3) == 101) { if (peek8(name+4) == 56) { is_poke8 = 1; } } } } }
+            }
+
+            int32 arg_idx = 0;
+            while (tok_type != 6) {
+                parse_expr();
+                arg_idx = arg_idx + 1;
+                if (tok_type == 28) { next_token(); }
+            }
+            expect(6);
+            
+            if (is_syscall == 1) {
+                if (arg_idx >= 7) { emit_str("    popq %%r9\n"); }
+                if (arg_idx >= 6) { emit_str("    popq %%r8\n"); }
+                if (arg_idx >= 5) { emit_str("    popq %%r10\n"); }
+                if (arg_idx >= 4) { emit_str("    popq %%rdx\n"); }
+                if (arg_idx >= 3) { emit_str("    popq %%rsi\n"); }
+                if (arg_idx >= 2) { emit_str("    popq %%rdi\n"); }
+                if (arg_idx >= 1) { emit_str("    popq %%rax\n"); }
+                emit_str("    syscall\n");
+                emit_str("    pushq %%rax\n");
+                ret 0;
+            }
+            if (is_peek8 == 1) {
+                emit_str("    popq %%rax\n");
+                emit_str("    movzbq (%%rax), %%rax\n");
+                emit_str("    pushq %%rax\n");
+                ret 0;
+            }
+            if (is_poke8 == 1) {
+                emit_str("    popq %%rbx\n"); // val
+                emit_str("    popq %%rax\n"); // addr
+                emit_str("    movb %%bl, (%%rax)\n");
+                emit_str("    pushq %%rbx\n");
+                ret 0;
+            }
+
+            if (arg_idx >= 6) { emit_str("    popq %%r9\n"); }
+            if (arg_idx >= 5) { emit_str("    popq %%r8\n"); }
+            if (arg_idx >= 4) { emit_str("    popq %%rcx\n"); }
+            if (arg_idx >= 3) { emit_str("    popq %%rdx\n"); }
+            if (arg_idx >= 2) { emit_str("    popq %%rsi\n"); }
+            if (arg_idx >= 1) { emit_str("    popq %%rdi\n"); }
+            
+            emit_str("    call ");
+            int32 i = 0;
+            while (i < name_len) {
+                emit(peek8(name + i));
+                i = i + 1;
+            }
+            emit(10);
+            emit_str("    pushq %%rax\n");
+            ret 0;
+        }
+        int32 off = get_var_offset_by_name(name, name_len);
+        if (off != 0) {
+            emit_str("    movq ");
+            write_int(off);
+            emit_str("(%%rbp), %%rax\n");
+        } else {
+            emit_str("    movq ");
+            int32 i = 0;
+            while (i < name_len) {
+                emit(peek8(name + i));
+                i = i + 1;
+            }
+            emit_str("(%%rip), %%rax\n");
+        }
+        emit_str("    pushq %%rax\n");
+        ret 0;
+    }
+    if (tok_type == 17) { // Dereference *
+        next_token();
+        parse_primary();
+        emit_str("    popq %%rax\n");
+        emit_str("    movq (%%rax), %%rax\n");
+        emit_str("    pushq %%rax\n");
+        ret 0;
+    }
+    ret 0;
+}
+
+fn parse_expr() int32 {
+    parse_primary();
+    while (tok_type == 10 || tok_type == 15 || tok_type == 16 || tok_type == 17 || tok_type == 18 || tok_type == 19 || tok_type == 20 || tok_type == 21 || tok_type == 22 || tok_type == 31 || tok_type == 32) {
+        int32 op = tok_type;
+        int32 is_assign = 0;
+        if (tok_type == 10) { is_assign = 1; }
+        next_token();
+        
+        if (is_assign == 1) {
+            parse_expr();
+            emit_str("    popq %%rax\n");
+            int32 off = get_var_offset_by_name(tok_ident_ptr, tok_value);
+            if (off != 0) {
+                emit_str("    movq %%rax, ");
+                write_int(off);
+                emit_str("(%%rbp)\n");
+            } else {
+                emit_str("    movq %%rax, ");
+                int32 i = 0;
+                while (i < tok_value) {
+                    emit(peek8(tok_ident_ptr + i));
+                    i = i + 1;
+                }
+                emit_str("(%%rip)\n");
+            }
+            emit_str("    pushq %%rax\n");
+            ret 0;
+        }
+        
+        parse_primary();
+        emit_str("    popq %%rbx\n");
+        emit_str("    popq %%rax\n");
+        
+        if (op == 15) {
+            emit_str("    addq %%rbx, %%rax\n");
+        }
+        if (op == 16) {
+            emit_str("    subq %%rbx, %%rax\n");
+        }
+        if (op == 17) {
+            emit_str("    imulq %%rbx, %%rax\n");
+        }
+        if (op == 18) {
+            emit_str("    cqo\n");
+            emit_str("    idivq %%rbx\n");
+        }
+        if (op == 19) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    sete %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        if (op == 21) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    setl %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        if (op == 22) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    setg %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        if (op == 20) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    setne %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        if (op == 31) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    setle %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        if (op == 32) {
+            emit_str("    cmpq %%rbx, %%rax\n");
+            emit_str("    setge %%al\n");
+            emit_str("    movzbq %%al, %%rax\n");
+        }
+        emit_str("    pushq %%rax\n");
+    }
+    ret 0;
+}
+
+fn parse_block() int32 {
+    if (tok_type != 7) { ret 0; }
+    next_token();
+    while (tok_type != 8 && tok_type != 0) {
+        parse_stmt();
+    }
+    if (tok_type == 8) { next_token(); }
+    ret 0;
+}
+
+fn parse_stmt() int32 {
+    if (tok_type == 3 || tok_type == 23 || tok_type == 24) { // int32, int8, str
+        next_token();
+        if (tok_type == 17) { next_token(); } // pointer *
+        int32 v_name = tok_ident_ptr;
+        int32 v_len = tok_value;
+        next_token();
+        
+        add_var(v_name, v_len, 0 - STACK_OFFSET);
+        int32 current_off = 0 - STACK_OFFSET;
+        STACK_OFFSET = STACK_OFFSET + 8;
+        
+        if (tok_type == 10) {
+            next_token();
+            parse_expr();
+            emit_str("    popq %%rax\n");
+            emit_str("    movq %%rax, ");
+            write_int(current_off);
+            emit_str("(%%rbp)\n");
+        }
+        expect(9);
+        ret 0;
+    }
+    if (tok_type == 2) {
+        next_token();
+        if (tok_type != 9) {
+            parse_expr();
+            emit_str("    popq %%rax\n");
+        }
+        emit_str("    jmp .L_END_FUNC_");
+        write_int(FUNC_LABEL);
+        emit(10);
+        expect(9);
+        ret 0;
+    }
+    if (tok_type == 12) { // if
+        next_token();
+        expect(5);
+        parse_expr();
+        expect(6);
+        int32 l_else = fresh_label();
+        int32 l_end = fresh_label();
+        emit_str("    popq %%rax\n");
+        emit_str("    cmpq $0, %%rax\n");
+        emit_str("    je .L_"); write_int(l_else); emit(10);
+        parse_stmt();
+        emit_str("    jmp .L_"); write_int(l_end); emit(10);
+        emit_str(".L_"); write_int(l_else); emit_str(":\n");
+        if (tok_type == 13) {
+            next_token();
+            parse_stmt();
+        }
+        emit_str(".L_"); write_int(l_end); emit_str(":\n");
+        ret 0;
+    }
+    if (tok_type == 30) { // while
+        next_token();
+        int32 l_start = fresh_label();
+        int32 l_end = fresh_label();
+        emit_str(".L_"); write_int(l_start); emit_str(":\n");
+        expect(5);
+        parse_expr();
+        expect(6);
+        emit_str("    popq %%rax\n");
+        emit_str("    cmpq $0, %%rax\n");
+        emit_str("    je .L_"); write_int(l_end); emit(10);
+        parse_stmt();
+        emit_str("    jmp .L_"); write_int(l_start); emit(10);
+        emit_str(".L_"); write_int(l_end); emit_str(":\n");
+        ret 0;
+    }
+    if (tok_type == 7) {
+        parse_block();
+        ret 0;
+    }
+    parse_expr();
+    expect(9);
+    ret 0;
+}
+
+fn parse_func() int32 {
+    expect(1); // fn
+    int32 name = tok_ident_ptr;
+    int32 name_len = tok_value;
+    next_token();
+    
+    FUNC_LABEL = fresh_label();
+    clear_vars();
+    
+    expect(5); // (
+    int32 param_idx = 0;
+    while (tok_type != 6) {
+        debug_log(tok_type);
+        next_token(); // type
+        if (tok_type == 17) { next_token(); } // pointer *
+        
+        int32 p_name = tok_ident_ptr;
+        int32 p_len = tok_value;
+        next_token(); // name
+        
+        add_var(p_name, p_len, -8 * (param_idx + 1));
+        param_idx = param_idx + 1;
+        
+        if (tok_type == 28) { next_token(); } // comma
+    }
+    debug_log(1111);
+    expect(6); // )
+    debug_log(104); // ) read
+    
+    // Optional return type
+    if (tok_type == 3 || tok_type == 23 || tok_type == 24 || tok_type == 29) {
+        next_token();
+        debug_log(105); // return type read
+    }
+    
+    STACK_OFFSET = 8 * (param_idx + 1);
+    if (STACK_OFFSET < 16) { STACK_OFFSET = 16; }
+    
+    debug_log(106); // starting emit
+    emit(10);
+    int32 i = 0;
+    while (i < name_len) {
+        emit(peek8(name + i));
+        i = i + 1;
+    }
+    emit(58);
+    emit(10);
+    emit_str("    pushq %%rbp\n");
+    emit_str("    movq %%rsp, %%rbp\n");
+    
+    if (param_idx > 0) { emit_str("    movq %%rdi, -8(%%rbp)\n"); }
+    if (param_idx > 1) { emit_str("    movq %%rsi, -16(%%rbp)\n"); }
+    if (param_idx > 2) { emit_str("    movq %%rdx, -24(%%rbp)\n"); }
+    if (param_idx > 3) { emit_str("    movq %%rcx, -32(%%rbp)\n"); }
+    if (param_idx > 4) { emit_str("    movq %%r8, -40(%%rbp)\n"); }
+    if (param_idx > 5) { emit_str("    movq %%r9, -48(%%rbp)\n"); }
+    
+    emit_str("    subq $1024, %%rsp\n");
+    
+    parse_block();
+    
+    emit_str(".L_END_FUNC_");
+    write_int(FUNC_LABEL);
+    emit(58);
+    emit(10);
+    emit_str("    movq %%rbp, %%rsp\n");
+    emit_str("    popq %%rbp\n");
+    emit_str("    ret\n");
+    
+    ret 0;
+}
+
+fn compile(int32 src_ptr, int32 src_len) int32 {
+    init_lexer(src_ptr, src_len);
+    OUT = OUTPUT_START;
+    
+    emit_str("    .text\n");
+    emit_str("    .globl main\n\n");
+    while (tok_type != 0) {
+        if (tok_type == 1) {
+            parse_func();
+        }
+        if (tok_type == 3) {
+            next_token();
+            emit_str("    .globl ");
+            int32 i = 0;
+            while (i < tok_value) {
+                emit(peek8(tok_ident_ptr + i));
+                i = i + 1;
+            }
+            emit(10);
+            emit_str("    .quad 0\n");
+            next_token();
+            if (tok_type == 10) {
+                next_token();
+                if (tok_type == 11) {
+                    emit_str("    .quad ");
+                    int32 val = 0;
+                    int32 j = 0;
+                    while (j < tok_value) {
+                        val = val * 10 + (peek8(tok_ident_ptr + j) - 48);
+                        j = j + 1;
+                    }
+                    write_int(val);
+                    emit(10);
+                    next_token();
+                }
+            }
+            expect(9);
+        } else {
+            if (tok_type != 0) { next_token(); }
+        }
+    }
+    
+    emit_str("\n_start:\n");
+    emit_str("    call entry_point\n");
+    emit_str("    movq %%rax, %%rdi\n");
+    emit_str("    movq $60, %%rax\n");
+    emit_str("    syscall\n");
+    
+    ret 0;
+}
+
+int32 STACK_OFFSET = 16;
+int32 LABEL_ID = 0;
+int32 FUNC_LABEL = 0;
+int32 OUTPUT_START = 131072;
+int32 OUT = 65536;
+int32 tok_pos = 0;
+int32 tok_line = 1;
+int32 tok_type = 0;
+int32 tok_value = 0;
+int32 tok_ident_ptr = 0;
+
+int32 TOK_EOF = 0;
+int32 TOK_FN = 1;
+int32 TOK_RET = 2;
+int32 TOK_INT32 = 3;
+int32 TOK_IDENT = 4;
+int32 TOK_LPAREN = 5;
+int32 TOK_RPAREN = 6;
+int32 TOK_LBRACE = 7;
+int32 TOK_RBRACE = 8;
+int32 TOK_SEMI = 9;
+int32 TOK_EQ = 10;
+int32 TOK_NUMBER = 11;
+int32 TOK_IF = 12;
+int32 TOK_ELSE = 13;
+int32 TOK_PLUS = 15;
+int32 TOK_MINUS = 16;
+int32 TOK_STAR = 17;
+int32 TOK_SLASH = 18;
+int32 TOK_EQ_EQ = 19;
+int32 TOK_NOT_EQ = 20;
+int32 TOK_LT = 21;
+int32 TOK_GT = 22;
+int32 TOK_INT8 = 23;
+int32 TOK_STR = 24;
+int32 TOK_LOGG = 25;
+int32 TOK_AND = 26;
+int32 TOK_OR = 27;
+int32 TOK_COMMA = 28;
+int32 TOK_VOID = 29;
+int32 TOK_WHILE = 30;
+int32 TOK_LT_EQ = 31;
+int32 TOK_GT_EQ = 32;
+int32 TOK_STRING = 33;
+
+int32 SRC = 0;
+int32 SRC_LEN = 0;
+
+int32 VAR_NAME_PTRS = 131072;
+int32 VAR_OFFSETS = 131584;
+int32 NUM_VARS = 0;
+
+int32 VAR_NAME_LENS = 132096;
+int32 STRINGS = 262144;
+int32 STR_PTRS = 272384;
+int32 STR_LENS = 272896;
+int32 NUM_STRINGS = 0;
+int32 STR_BUF_POS = 0;
+
+fn sys_open(int8* path, int32 flags) int32 {
+    ret syscall(2, path, flags, 420);
+}
+
+fn sys_read(int32 fd, int8* buf, int32 len) int32 {
+    ret syscall(0, fd, buf, len);
+}
+
+fn sys_write(int32 fd, int8* buf, int32 len) int32 {
+    ret syscall(1, fd, buf, len);
+}
+
+fn sys_close(int32 fd) int32 {
+    ret syscall(3, fd);
+}
+
+fn write_int_to_stdout(int32 n) int32 {
+    if (n == 0) { sys_write(1, "0", 1); ret 0; }
+    if (n < 0) { sys_write(1, "-", 1); n = 0 - n; }
+    int32 buf = OUTPUT_START + 9000000; 
+    int32 i = 0;
+    while (n > 0) {
+        int32 next_n = n / 10;
+        int32 digit = n - (next_n * 10);
+        poke8(buf + i, digit + 48);
+        n = next_n;
+        i = i + 1;
+    }
+    int32 j = 0;
+    while (j < (i / 2)) {
+        int32 tmp = peek8(buf + j);
+        poke8(buf + j, peek8(buf + i - 1 - j));
+        poke8(buf + i - 1 - j, tmp);
+        j = j + 1;
+    }
+    sys_write(1, buf, i);
+    ret 0;
+}
+
+fn entry_point() int32 {
+    int32 h = syscall(12, 0);
+    syscall(12, h + 10485760); // 10MB
+    
+    OUTPUT_START = h;
+    OUT = h;
+    // Move buffers to after 4MB to give output plenty of room
+    VAR_NAME_PTRS = h + 4194304;
+    VAR_NAME_LENS = h + 4325376;
+    VAR_OFFSETS = h + 4456448;
+    STRINGS = h + 5242880;
+    STR_PTRS = h + 6291456;
+    STR_LENS = h + 6553600;
+    int32 src_buf = h + 8388608;
+    
+    debug_log(9999);
+    
+    int32 fd = sys_open("input.nt", 0);
+    if (fd < 0) {
+        sys_write(1, "Could not open input.nt\n", 24);
+        syscall(60, 1);
+    }
+    int32 len = sys_read(fd, src_buf, 65536);
+    sys_close(fd);
+    
+    compile(src_buf, len);
+    
+    sys_write(1, OUTPUT_START, OUT - OUTPUT_START);
+    
+    ret 0;
+}
